@@ -295,6 +295,7 @@ class Stream:
         :rtype: str
 
         """
+        print('testing')
         file_path = self.get_file_path(
             filename=filename,
             output_path=output_path,
