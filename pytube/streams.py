@@ -257,7 +257,7 @@ class Stream:
 
     def download(
         self,
-        session,
+        session=None,
         output_path: Optional[str] = None,
         filename: Optional[str] = None,
         filename_prefix: Optional[str] = None,
@@ -296,8 +296,6 @@ class Stream:
         :rtype: str
 
         """
-        print('testing2')
-        print(session.get("http://httpbin.org/ip").text)
         file_path = self.get_file_path(
             filename=filename,
             output_path=output_path,
@@ -311,31 +309,57 @@ class Stream:
 
         bytes_remaining = self.filesize
         logger.debug(f'downloading ({self.filesize} total bytes) file to {file_path}')
+        if session:
+            with open(file_path, "wb") as fh:
+                try:
+                    for chunk in session.get(
+                        self.url,
+                        timeout=timeout, stream=True
+                    ):
+                        # reduce the (bytes) remainder by the length of the chunk.
+                        bytes_remaining -= len(chunk)
+                        # send to the on_progress callback.
+                        self.on_progress(chunk, fh, bytes_remaining)
+                except HTTPError as e:
+                    if e.code != 404:
+                        raise
+                    # Some adaptive streams need to be downloaded with sequence numbers
+                    for chunk in session.seq_stream(
+                        self.url,
+                        timeout=timeout,
+                        max_retries=max_retries
+                    ):
+                        # reduce the (bytes) remainder by the length of the chunk.
+                        bytes_remaining -= len(chunk)
+                        # send to the on_progress callback.
+                        self.on_progress(chunk, fh, bytes_remaining)
+            self.on_complete(file_path)
+        else:
+            with open(file_path, "wb") as fh:
+                try:
+                    for chunk in request.get(
+                        self.url,
+                        timeout=timeout, max_retries=max_retries
+                    ):
+                        # reduce the (bytes) remainder by the length of the chunk.
+                        bytes_remaining -= len(chunk)
+                        # send to the on_progress callback.
+                        self.on_progress(chunk, fh, bytes_remaining)
+                except HTTPError as e:
+                    if e.code != 404:
+                        raise
+                    # Some adaptive streams need to be downloaded with sequence numbers
+                    for chunk in request.seq_stream(
+                        self.url,
+                        timeout=timeout,
+                        max_retries=max_retries
+                    ):
+                        # reduce the (bytes) remainder by the length of the chunk.
+                        bytes_remaining -= len(chunk)
+                        # send to the on_progress callback.
+                        self.on_progress(chunk, fh, bytes_remaining)
+            self.on_complete(file_path)
 
-        with open(file_path, "wb") as fh:
-            try:
-                for chunk in session.get(
-                    self.url,
-                    timeout=timeout, stream=True
-                ):
-                    # reduce the (bytes) remainder by the length of the chunk.
-                    bytes_remaining -= len(chunk)
-                    # send to the on_progress callback.
-                    self.on_progress(chunk, fh, bytes_remaining)
-            except HTTPError as e:
-                if e.code != 404:
-                    raise
-                # Some adaptive streams need to be downloaded with sequence numbers
-                for chunk in session.seq_stream(
-                    self.url,
-                    timeout=timeout,
-                    max_retries=max_retries
-                ):
-                    # reduce the (bytes) remainder by the length of the chunk.
-                    bytes_remaining -= len(chunk)
-                    # send to the on_progress callback.
-                    self.on_progress(chunk, fh, bytes_remaining)
-        self.on_complete(file_path)
         return file_path
 
     def get_file_path(
