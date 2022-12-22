@@ -314,10 +314,10 @@ class Stream:
 
         with open(file_path, "wb") as fh:
             try:
-                for chunk in session.stream(
+                for chunk in session.get(
                     self.url,
                     timeout=timeout,
-                    max_retries=max_retries
+                    max_retries=max_retries, stream=True
                 ):
                     # reduce the (bytes) remainder by the length of the chunk.
                     bytes_remaining -= len(chunk)
