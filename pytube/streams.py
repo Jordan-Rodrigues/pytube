@@ -257,6 +257,7 @@ class Stream:
 
     def download(
         self,
+        session,
         output_path: Optional[str] = None,
         filename: Optional[str] = None,
         filename_prefix: Optional[str] = None,
@@ -295,7 +296,8 @@ class Stream:
         :rtype: str
 
         """
-        print('testing')
+        print('testing2')
+        print(session.get("http://httpbin.org/ip").text)
         file_path = self.get_file_path(
             filename=filename,
             output_path=output_path,
@@ -312,7 +314,7 @@ class Stream:
 
         with open(file_path, "wb") as fh:
             try:
-                for chunk in request.stream(
+                for chunk in session.stream(
                     self.url,
                     timeout=timeout,
                     max_retries=max_retries
@@ -324,8 +326,8 @@ class Stream:
             except HTTPError as e:
                 if e.code != 404:
                     raise
-                # Some adaptive streams need to be requested with sequence numbers
-                for chunk in request.seq_stream(
+                # Some adaptive streams need to be downloaded with sequence numbers
+                for chunk in session.seq_stream(
                     self.url,
                     timeout=timeout,
                     max_retries=max_retries
