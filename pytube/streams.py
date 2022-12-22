@@ -337,7 +337,7 @@ class Stream:
         else:
             with open(file_path, "wb") as fh:
                 try:
-                    for chunk in request.get(
+                    for chunk in request.stream(
                         self.url,
                         timeout=timeout, max_retries=max_retries
                     ):
